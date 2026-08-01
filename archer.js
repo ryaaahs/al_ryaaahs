@@ -1,9 +1,32 @@
-let is_attacking = true;
-const farming_targets = ["crab", "phoenix"];
+let is_attacking = false;
+let is_restocking = false;
+let farming_targets;
 const merchant_name = "merchire";
+const farm = "crab";
 const elixir_name = "elixirluck";
 
-move_to_combat()
+// Start the loop by moving the character to the spot
+// When we are at the spot, the toon will start attacking the target
+check_location_and_move(farm);
+
+/**
+* Moves to the defined farming spot and gives the mob list for it
+* @param {string} farm_type - The type of farm
+*/ 
+async function check_location_and_move(farm_type)
+{
+	switch (farm_type)
+	{
+		case "crab": 
+			if (character.real_x != -1202.5 && character.real_y != -66)
+			{
+				// Not at crab location, need to move
+				await smart_move("crab");
+			}
+			farming_targets = ["crab", "phoenix"]; 		
+		break;
+	}
+}
 
 /**
 * Periodically checks to see if the our elixir activated, if not activate it.
@@ -31,40 +54,59 @@ async function handle_elixir() {
 setInterval(handle_elixir, (1000 * 60) * 5);
 
 /**
+* Restocks the toon and moves them back to the farm spot
+* @param {string} farm - The type of farm 
+*
+*/ 
+async function restock_toon(farm)
+{
+	// Reset the attack logic, as we are moving away from the farm
+	if (is_restocking) return;
+	is_restocking = true
+	
+	try 
+	{
+		await move_to_shop();
+		await check_location_and_move(farm);
+	}
+	finally
+	{
+		is_restocking = false;
+	}
+}
+
+/**
 * Moves the toon to the shop to buy potions if out
 *
 */
 async function move_to_shop() {
-    	await smart_move(-84, -120, "main");
-    	let pot_name = "";
-    	let pot_index = "";
-    
-    	if (character.max_mp < 500) 
-    	{
-        	pot_name = "mpot0";
-        	pot_index = locate_item(pot_name);
-    	}
-    	else 
-    	{
-        	pot_name = "mpot1";
-        	pot_index = locate_item(pot_name);
-    	}
-    
-	if (pot_index == -1) 
-    	{
-        	buy(pot_name, 9999);
-    	} 
-    	else 
-    	{
-        	let pot_slot = buy(pot_name, 9999 - character.items[pot_index].q).num;
-        	swap(pot_index, pot_slot);
-    	}
-  
-	await sell_items()
-}
+    	const hp_pot_name = character.max_hp < 400 ? "hpot0" : "hpot1";
+	const mp_pot_name = character.max_mp < 500 ? "mpot0" : "mpot1";
+	const pot_array = [hp_pot_name, mp_pot_name];
+ 	const hp_pot_index = locate_item(hp_pot_name);
+	const mp_pot_index = locate_item(mp_pot_name);
 
-async function move_to_combat() {
-	await smart_move("crab");
+    	await smart_move(-84, -120, "main");
+	
+	sell_items();
+
+	for (pot of pot_array)
+	{
+		const searched_index = pot.includes("hp") ? hp_pot_index : mp_pot_index;
+
+		if (searched_index == -1) 
+		{
+			buy(pot, 9999);
+		} 
+		else 
+		{	
+			if (character.items[searched_index].q != 9999)
+			{
+				const bought_pot_slot_index = buy(pot, 9999 - character.items[searched_index].q).num;
+				if (bought_pot_slot_index) swap(searched_index, bought_pot_slot_index);
+			}
+		}
+	}
 }
 
 /**
@@ -92,7 +134,7 @@ async function sell_items() {
 		{
 			sell(i, 9999);
 	  	}
-  	}
+  	} 
 }
 
 /**
@@ -105,15 +147,10 @@ async function sell_items() {
 setInterval(async function()
 {  
     	let pot_index = "";
-	let mp_usage = 0;
-
-    	if (character.esize <= 2 && !smart.moving) 
-    	{
-		await move_to_shop();
-		await move_to_combat();
-	}
-	
+	let mp_usage;
 	let hp_usage = 400;
+    	
+	if (character.esize <= 2 && !smart.moving && !is_restocking) restock_toon(farm);
 	
     	if (character.max_mp < 500) 
 	{
@@ -126,33 +163,21 @@ setInterval(async function()
         	mp_usage = 500;
     	}
     
-	if (pot_index == -1 && !smart.moving) 
-	{
-	    await move_to_shop();
-	    await move_to_combat();
-	}
+	if (pot_index == -1 && !smart.moving && !is_restocking) restock_toon(farm);
 	
-	if (character.hp <= character.max_hp - hp_usage && !is_on_cooldown("use_hp"))
-	{
-		use_skill("use_hp")
-	} else if ((character.mp <= character.mp_cost || character.mp <= character.max_mp - mp_usage) && !is_on_cooldown("use_mp")) 
-	{
-		use_skill("use_mp")
-	}
+	if (character.hp <= character.max_hp - hp_usage && !is_on_cooldown("use_hp")) use_skill("use_hp");
+	else if ((character.mp <= character.mp_cost || character.mp <= character.max_mp - mp_usage) && !is_on_cooldown("use_mp")) use_skill("use_mp"); 
 	
 	loot();
 
-    if (!smart.moving) 
-    {
-        clear_drawings();
-        draw_circle(character.x, character.y, character.range, 2, 0xFF0000);
+  	//clear_drawings();
+        //draw_circle(character.x, character.y, character.range, 2, 0xFF0000);
         
-	if (!is_attacking) 
+	if (!is_attacking && farming_targets) 
 	{
             is_attacking = true
             attack_target(get_mob_targets());
         }
-    }
 }, 1000 * 0.25); // Loops every 1/4 second
 
 /**
@@ -162,7 +187,7 @@ setInterval(async function()
 */ 
 async function attack_target(targets) 
 { 
-    if (targets.length === 0 || smart.moving) 
+    if (targets.length === 0) 
     {
         is_attacking = false
         return
@@ -174,30 +199,32 @@ async function attack_target(targets)
     {
         if ((targets.length == 5 && targets.every((m) => is_in_range(m, "attack"))) && character.mp > G.skills["5shot"].mp && character.level >= G.skills["5shot"].level) 
 	{
-            if (!is_on_cooldown("5shot") && targets.every((target) => get_entity(target.id))) {
-                game_log(`Five Shot`, "#FFA600");
-                await use_skill("5shot", targets)
-                reduce_cooldown("5shot", Math.min(...parent.pings))
-            }
+            	if (!is_on_cooldown("5shot") && targets.every((target) => get_entity(target.id))) 
+		{
+                	game_log(`Five Shot`, "#FFA600");
+                	await use_skill("5shot", targets)
+                	reduce_cooldown("5shot", Math.min(...parent.pings))
+            	}
 
         } 
 	else if ((targets.length >= 3 && targets.every((m) => is_in_range(m, "attack"))) && character.mp > G.skills["3shot"].mp && character.level >= G.skills["3shot"].level) 
 	{
-            if (!is_on_cooldown("3shot") && targets.every((target) => get_entity(target.id))) {
-                game_log(`Three Shot`, "#FFA600");
-                await use_skill("3shot", targets.slice(0, 3))
-                reduce_cooldown("3shot", Math.min(...parent.pings))
-            }
+            	if (!is_on_cooldown("3shot") && targets.every((target) => get_entity(target.id))) 
+		{
+                	game_log(`Three Shot`, "#FFA600");
+                	await use_skill("3shot", targets.slice(0, 3))
+                	reduce_cooldown("3shot", Math.min(...parent.pings))
+            	}
 
         } 
 	else if (targets.length >= 1 && is_in_range(targets[0], "attack") && character.mp > character.mp_cost) 
 	{
-            if (can_attack(targets[0]) && !is_on_cooldown("attack") && get_entity(targets[0].id)) 
-	    {
-                game_log(`Single Shot`, "#FFA600");
-                await attack(targets[0])
-                reduce_cooldown("attack", Math.min(...parent.pings))
-            }
+            	if (can_attack(targets[0]) && !is_on_cooldown("attack") && get_entity(targets[0].id)) 
+	    	{
+                	game_log(`Single Shot`, "#FFA600");
+                	await attack(targets[0])
+                	reduce_cooldown("attack", Math.min(...parent.pings))
+            	}
         }
     } 
     catch(e) 
@@ -207,7 +234,6 @@ async function attack_target(targets)
 
     setTimeout(() => attack_target(get_mob_targets()), Math.max(100, parent.next_skill["attack"].getTime() - Date.now()));
 }
-attack_target(get_mob_targets()); 
 
 /**
 * Grabs a collection of mobs that fit our farmiong targets
