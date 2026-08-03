@@ -1,21 +1,25 @@
 let is_attacking = false;
 let is_restocking = false;
 let farming_targets;
+// Once events are implemented, it will bounce to different targets
+let farm = "crab";
 const merchant_name = "merchire";
-const farm = "crab";
 const elixir_name = "elixirluck";
+const booster_name = "luckbooster";
+const minute = 1000 * 60;
+const hour = minute * 60;
 
 // Start the loop by moving the character to the spot
 // When we are at the spot, the toon will start attacking the target
-check_location_and_move(farm);
+check_location_and_move();
 
 /**
 * Moves to the defined farming spot and gives the mob list for it
-* @param {string} farm_type - The type of farm
+*
 */ 
-async function check_location_and_move(farm_type)
+async function check_location_and_move()
 {
-	switch (farm_type)
+	switch (farm)
 	{
 		case "crab": 
 			if (character.real_x != -1202.5 && character.real_y != -66)
@@ -29,6 +33,39 @@ async function check_location_and_move(farm_type)
 }
 
 /**
+* Periodically checks to see if see we have a booster and see if its activated.
+* If not, get a new one.
+*/ 
+async function handle_booster() {
+	let booster_index = locate_item(booster_name);
+
+	if (booster_index == -1)
+	{
+		try 
+		{
+			// Move to shop seller
+			await smart_move("premium");
+			await buy(booster_name);
+			activate(locate_item(booster_name));
+			await check_location_and_move();
+		}
+		catch (error)
+		{
+			console.error(`Error occurred when attempting booster logic: ${error}`);
+		}
+	}
+	else 
+	{
+		// We have a booster, confirm if its activated
+		if (character.items[booster_index]?.expires == null)
+		{
+			activate(character_items[booster_index]);
+		}
+	}
+}
+setInterval(handle_booster, hour);
+
+/**
 * Periodically checks to see if the our elixir activated, if not activate it.
 *
 */ 
@@ -36,12 +73,12 @@ async function handle_elixir() {
 	try 
 	{
         	if (character.slots?.elixir) return;
-        	let elixir_index = locate_item(elixir);
+        	let elixir_index = locate_item(elixir_name);
 
         	// Drink the consume x times
         	for (let i = 0; i < 4; i++) 
 		{
-            		game_log(`Consuming ${elixir}`, "#FFA600");
+            		game_log(`Consuming ${elixir_name}`, "#FFA600");
             		consume(elixir_index);
         	}
         
@@ -51,14 +88,13 @@ async function handle_elixir() {
         	console.log("Consume error: ", error);
     	}
 }
-setInterval(handle_elixir, (1000 * 60) * 5);
+setInterval(handle_elixir, minute * 5);
 
 /**
 * Restocks the toon and moves them back to the farm spot
-* @param {string} farm - The type of farm 
 *
 */ 
-async function restock_toon(farm)
+async function restock_toon()
 {
 	// Reset the attack logic, as we are moving away from the farm
 	if (is_restocking) return;
@@ -150,7 +186,7 @@ setInterval(async function()
 	let mp_usage;
 	let hp_usage = 400;
     	
-	if (character.esize <= 2 && !smart.moving && !is_restocking) restock_toon(farm);
+	if (character.esize <= 2 && !smart.moving && !is_restocking) restock_toon();
 	
     	if (character.max_mp < 500) 
 	{
@@ -163,7 +199,7 @@ setInterval(async function()
         	mp_usage = 500;
     	}
     
-	if (pot_index == -1 && !smart.moving && !is_restocking) restock_toon(farm);
+	if (pot_index == -1 && !smart.moving && !is_restocking) restock_toon();
 	
 	if (character.hp <= character.max_hp - hp_usage && !is_on_cooldown("use_hp")) use_skill("use_hp");
 	else if ((character.mp <= character.mp_cost || character.mp <= character.max_mp - mp_usage) && !is_on_cooldown("use_mp")) use_skill("use_mp"); 
