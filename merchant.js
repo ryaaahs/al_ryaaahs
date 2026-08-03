@@ -1,6 +1,8 @@
 // TODO:
 // LOG resolves from upgrade/compound (Pass/Fail)
 
+let farm = "crab";
+
 const items_to_upgrade = 
 {
 	firebow: { target_level: 7 },
@@ -14,6 +16,9 @@ const items_to_upgrade =
 const DEBUG = true;
 const inventory_length = character.items.length;
 const farmers = ["altfire", "firealt", "Garchomp"];
+const locations = {
+	"crab": { x: -1202.5, y: -66 }  
+}; 
 
 setup_merchant()
 
@@ -125,7 +130,15 @@ async function three_server_farm(name = "", data = {})
 			merchant_state.state = "complete"
 			localStorage.setItem("merchant_state", JSON.stringify(merchant_state));
 			setTimeout(three_server_farm, (1000 * 60) * 60);
-			use_skill("use_town");
+			const town_again = () =>
+			{
+				if (character.real_x == locations[farm].x && character.real_y == locations[farm].y)
+				{
+					use_skill("use_town");
+					setTimeout(town_again, 3000);
+				}
+			}
+			setTimeout(town_again, 3000);
 		}
 		else
 		{
