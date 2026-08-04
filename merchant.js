@@ -48,17 +48,17 @@ function setup_merchant() {
  *
  */
 function al_logger(type, data) {
-	const timestamp = new Date()
+	const timestamp = new Date();
 	switch (type) {
 		case "DEBUG":
 			if (DEBUG)
 				console.debug(`${timestamp.toISOString()} [DEBUG] ${data}`);
 			break;
 		case "ERROR":
-			console.error(`${timestamp.toISOString()} [ERROR] ${data}`)
+			console.error(`${timestamp.toISOString()} [ERROR] ${data}`);
 			break;
 		case "INFO":
-			console.info(`${timestamp.toISOString()} [INFO] ${data}`)
+			console.info(`${timestamp.toISOString()} [INFO] ${data}`);
 			break;
 	}
 }
@@ -70,7 +70,7 @@ setInterval(() => {
 	if ((character.mp <= character.mp_cost ||
 		character.mp <= character.max_mp - mp_usage) &&
 		!is_on_cooldown("use_mp")) {
-		use_skill("use_mp")
+		use_skill("use_mp");
 	}
 }, 100);
 
@@ -110,7 +110,7 @@ async function three_server_farm(name = "", data = {}) {
 
 		if (merchant_state.farmers_to_check.length == 0) {
 			al_logger("INFO", "Finished moving to farmers");
-			merchant_state.state = "complete"
+			merchant_state.state = "complete";
 			localStorage.setItem("merchant_state", JSON.stringify(merchant_state));
 			setTimeout(three_server_farm, (1000 * 60) * 60);
 			const town_again = () => {
@@ -119,7 +119,8 @@ async function three_server_farm(name = "", data = {}) {
 					use_skill("use_town");
 					setTimeout(town_again, 3000);
 				}
-			} setTimeout(town_again, 3000);
+			};  
+			setTimeout(town_again, 3000);
 		} else {
 			merchant_state.state = "location";
 			localStorage.setItem("merchant_state", JSON.stringify(merchant_state));
@@ -167,8 +168,8 @@ async function upgrade_inventory() {
 			(character.items[i]?.level || character.items[i].level == 0)) {
 			let item_name = character.items[i].name;
 
-			al_logger("DEBUG", `Item Name: ${item_name}`)
-			al_logger("DEBUG", `Item Level: ${character.items[i].level}`)
+			al_logger("DEBUG", `Item Name: ${item_name}`);
+			al_logger("DEBUG", `Item Level: ${character.items[i].level}`);
 
 			if (items_to_upgrade[character.items[i].name]) {
 				if (G.items[character.items[i].name].upgrade) {
@@ -183,7 +184,7 @@ async function upgrade_inventory() {
 						if (scroll_index == -1)
 						break;
 
-						al_logger("INFO", `Upgrading item "${item_name}" at index ${i}`)
+						al_logger("INFO", `Upgrading item "${item_name}" at index ${i}`);
 						try {
 							if (!is_on_cooldown("massproduction"))
 								await use_skill("massproduction");
@@ -222,7 +223,7 @@ async function upgrade_inventory() {
 							al_logger("DEBUG", `Item Group: ${item_group}`);
 							al_logger("DEBUG", `Item Group Length: ${item_group.length}`);
 
-							al_logger("INFO", `Compounding item "${item_name}" at index ${i}`)
+							al_logger("INFO", `Compounding item "${item_name}" at index ${i}`);
 							try {
 								if (!is_on_cooldown("massproduction"))
 									await use_skill("massproduction");

@@ -17,7 +17,6 @@ check_location_and_move();
  * Moves to the defined farming spot and gives the mob list for it
  *
  */
-
 async function check_location_and_move() {
 	switch (farm) {
 		case "crab":
@@ -193,7 +192,7 @@ setInterval(async function() {
 	// draw_circle(character.x, character.y, character.range, 2, 0xFF0000);
 
 	if (!is_attacking && farming_targets) {
-		is_attacking = true
+		is_attacking = true;
 		attack_target(get_mob_targets());
 	}
 }, 1000 * 0.25); // Loops every 1/4 second
@@ -205,8 +204,8 @@ setInterval(async function() {
  */
 async function attack_target(targets) {
 	if (targets.length === 0) {
-		is_attacking = false
-		return
+		is_attacking = false;
+		return;
 	}
 
 	change_target(targets[0]);
@@ -219,8 +218,8 @@ async function attack_target(targets) {
 			if (!is_on_cooldown("5shot") &&
 				targets.every((target) => get_entity(target.id))) {
 				game_log(`Five Shot`, "#FFA600");
-				await use_skill("5shot", targets)
-				reduce_cooldown("5shot", Math.min(...parent.pings))
+				await use_skill("5shot", targets);
+				reduce_cooldown("5shot", Math.min(...parent.pings));
 			}
 
 		} else if ((targets.length >= 3 &&
@@ -230,8 +229,8 @@ async function attack_target(targets) {
 			if (!is_on_cooldown("3shot") &&
 				targets.every((target) => get_entity(target.id))) {
 				game_log(`Three Shot`, "#FFA600");
-				await use_skill("3shot", targets.slice(0, 3))
-				reduce_cooldown("3shot", Math.min(...parent.pings))
+				await use_skill("3shot", targets.slice(0, 3));
+				reduce_cooldown("3shot", Math.min(...parent.pings));
 			}
 
 		} else if (targets.length >= 1 && is_in_range(targets[0], "attack") &&
@@ -239,12 +238,12 @@ async function attack_target(targets) {
 			if (can_attack(targets[0]) && !is_on_cooldown("attack") &&
 				get_entity(targets[0].id)) {
 				game_log(`Single Shot`, "#FFA600");
-				await attack(targets[0])
-				reduce_cooldown("attack", Math.min(...parent.pings))
+				await attack(targets[0]);
+				reduce_cooldown("attack", Math.min(...parent.pings));
 			}
 		}
-	} catch (e) {
-		console.error(e);
+	} catch (error) {
+		console.error(`Attack target errored: ${error}`);
 	}
 
 	setTimeout(() => attack_target(get_mob_targets()),
@@ -275,7 +274,7 @@ function get_mob_targets() {
 
 			return a_distance - b_distance;
 		})
-		.slice(0, 5)
+		.slice(0, 5);
 
 	return targets;
 }
