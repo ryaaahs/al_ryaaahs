@@ -2,6 +2,7 @@ let is_attacking = false;
 let is_restocking = false;
 let farming_targets;
 // Once events are implemented, it will bounce to different targets
+// parent.socket.emit("harakiri"); // Test death
 let farm = "crab";
 const merchant_name = "merchire";
 const elixir_name = "elixirluck";
@@ -12,6 +13,24 @@ const hour = minute * 60;
 // Start the loop by moving the character to the spot
 // When we are at the spot, the toon will start attacking the target
 check_location_and_move();
+
+/**
+ * Overrides the default death logic and moves back our character to the farming spot
+ *
+ */ 
+function handle_death() {
+	setTimeout(() => {
+		respawn();
+		const move_back = () => {
+			if (!character.rip) {
+				check_location_and_move();
+				return;
+			}
+			setTimeout(move_back, 500);
+		}; 
+		setTimeout(move_back, 500);
+	}, 1000 * 15)
+}
 
 /**
  * Moves to the defined farming spot and gives the mob list for it
@@ -32,6 +51,7 @@ async function check_location_and_move() {
 /**
  * Periodically checks to see if see we have a booster and see if its activated.
  * If not, get a new one.
+ *  
  */
 async function handle_booster() {
 	let booster_index = locate_item(booster_name);
@@ -165,6 +185,8 @@ setInterval(async function() {
 	let mp_usage;
 	let hp_usage = 400;
 
+	if (character.rip) return;
+
 	if (character.esize <= 2 && !smart.moving && !is_restocking)
 		restock_toon();
 
@@ -179,7 +201,7 @@ setInterval(async function() {
 	if (pot_index == -1 && !smart.moving && !is_restocking)
 		restock_toon();
 
-	if (character.hp <= character.max_hp - hp_usage && !is_on_cooldown("use_hp"))
+	if (character.hp <= (character.max_hp * 0.5) && !is_on_cooldown("use_hp"))
 		use_skill("use_hp");
 	else if ((character.mp <= character.mp_cost ||
 		character.mp <= character.max_mp - mp_usage) &&
@@ -243,7 +265,9 @@ async function attack_target(targets) {
 			}
 		}
 	} catch (error) {
-		console.error(`Attack target errored: ${error}`);
+		console.error(`Attack target errored: ${JSON.stringify(error)}`);
+		is_attacking = false;
+		return;
 	}
 
 	setTimeout(() => attack_target(get_mob_targets()),
